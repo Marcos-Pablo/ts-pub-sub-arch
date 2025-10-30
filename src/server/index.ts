@@ -1,8 +1,9 @@
 import amqp from 'amqplib';
 import { publishJSON } from '../internal/pubsub/publish.js';
-import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
+import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey } from '../internal/routing/routing.js';
 import type { PlayingState } from '../internal/gamelogic/gamestate.js';
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js';
+import { declareAndBind } from '../internal/pubsub/consume.js';
 
 async function main() {
   console.log('Starting Peril server...');
@@ -23,7 +24,11 @@ async function main() {
     }),
   );
 
-  const channel = await connection.createConfirmChannel();
+  const [directChannel, [topicChannel, queue]] = await Promise.all([
+    connection.createConfirmChannel(),
+    declareAndBind(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, 'durable'),
+  ]);
+
   printServerHelp();
 
   while (true) {
@@ -36,7 +41,7 @@ async function main() {
       case 'pause': {
         console.log('Sending pause message...');
         try {
-          await publishJSON(channel, ExchangePerilDirect, PauseKey, { isPaused: true } satisfies PlayingState);
+          await publishJSON(directChannel, ExchangePerilDirect, PauseKey, { isPaused: true } satisfies PlayingState);
         } catch (error) {
           console.log('Error publishing message:', error);
         }
@@ -45,7 +50,7 @@ async function main() {
       case 'resume': {
         console.log('Sending resume message...');
         try {
-          await publishJSON(channel, ExchangePerilDirect, PauseKey, { isPaused: false } satisfies PlayingState);
+          await publishJSON(directChannel, ExchangePerilDirect, PauseKey, { isPaused: false } satisfies PlayingState);
         } catch (error) {
           console.log('Error publishing message:', error);
         }
