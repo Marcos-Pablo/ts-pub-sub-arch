@@ -13,7 +13,6 @@ export async function publishJSON<T>(
   }
 
   const content = Buffer.from(json, 'utf8');
-  console.log('Publishing message');
 
   return new Promise((resolve, reject) => {
     ch.publish(exchange, routingKey, content, { contentType: 'application/json' }, (err) => {
@@ -21,6 +20,7 @@ export async function publishJSON<T>(
         reject(new Error('Message was NACKed by the broker'));
       }
       resolve();
+      console.log('Message published');
     });
   });
 }
