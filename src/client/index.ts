@@ -1,7 +1,10 @@
 import amqp from 'amqplib';
-import { clientWelcome } from '../internal/gamelogic/gamelogic.js';
+import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } from '../internal/gamelogic/gamelogic.js';
 import { declareAndBind } from '../internal/pubsub/consume.js';
 import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
+import { GameState } from '../internal/gamelogic/gamestate.js';
+import { commandSpawn } from '../internal/gamelogic/spawn.js';
+import { commandMove } from '../internal/gamelogic/move.js';
 
 async function main() {
   console.log('Starting Peril client...');
@@ -33,6 +36,53 @@ async function main() {
     PauseKey,
     'transient',
   );
+
+  const gameState = new GameState(username);
+  while (true) {
+    const input = await getInput();
+
+    if (input.length === 0) continue;
+
+    const command = input[0];
+    switch (command) {
+      case 'spawn': {
+        try {
+          commandSpawn(gameState, input);
+        } catch (error) {
+          console.log(error);
+        }
+        break;
+      }
+      case 'move': {
+        try {
+          commandMove(gameState, input);
+        } catch (error) {
+          console.log(error);
+        }
+        break;
+      }
+      case 'status': {
+        commandStatus(gameState);
+        break;
+      }
+      case 'help': {
+        printClientHelp();
+        break;
+      }
+      case 'spam': {
+        console.log('Spamming lot allowed yet!');
+        break;
+      }
+      case 'quit': {
+        printQuit();
+        process.exit(0);
+      }
+      default: {
+        console.log('Unknown command');
+        continue;
+      }
+    }
+  }
 }
 
 main().catch((err) => {
