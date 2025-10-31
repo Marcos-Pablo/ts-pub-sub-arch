@@ -20,3 +20,29 @@ export async function declareAndBind(
 
   return [channel, queue];
 }
+
+export async function subscribeJSON<T>(
+  conn: amqp.ChannelModel,
+  exchange: string,
+  queueName: string,
+  key: string,
+  queueType: SimpleQueueType,
+  handler: (data: T) => void,
+): Promise<void> {
+  const [ch, queue] = await declareAndBind(conn, exchange, queueName, key, queueType);
+
+  await ch.consume(queue.queue, (message: amqp.ConsumeMessage | null) => {
+    if (!message) return;
+
+    let content: T;
+    try {
+      content = JSON.parse(message.content.toString());
+    } catch (error) {
+      console.error('Could not unmarshal message:', error);
+      return;
+    }
+
+    handler(content);
+    ch.ack(message);
+  });
+}

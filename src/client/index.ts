@@ -1,10 +1,11 @@
 import amqp from 'amqplib';
 import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } from '../internal/gamelogic/gamelogic.js';
-import { declareAndBind } from '../internal/pubsub/consume.js';
+import { declareAndBind, subscribeJSON } from '../internal/pubsub/consume.js';
 import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
-import { GameState } from '../internal/gamelogic/gamestate.js';
+import { GameState, type PlayingState } from '../internal/gamelogic/gamestate.js';
 import { commandSpawn } from '../internal/gamelogic/spawn.js';
 import { commandMove } from '../internal/gamelogic/move.js';
+import { handlerPause } from './handlers.js';
 
 async function main() {
   console.log('Starting Peril client...');
@@ -38,6 +39,15 @@ async function main() {
   );
 
   const gameState = new GameState(username);
+  subscribeJSON(
+    connection,
+    ExchangePerilDirect,
+    `${PauseKey}.${username}`,
+    PauseKey,
+    'transient',
+    handlerPause(gameState),
+  );
+
   while (true) {
     const input = await getInput();
 
@@ -49,7 +59,7 @@ async function main() {
         try {
           commandSpawn(gameState, input);
         } catch (error) {
-          console.log(error);
+          console.log(error instanceof Error ? error.message : 'Error while trying to spawn unit');
         }
         break;
       }
@@ -57,7 +67,7 @@ async function main() {
         try {
           commandMove(gameState, input);
         } catch (error) {
-          console.log(error);
+          console.log(error instanceof Error ? error.message : 'Error while trying to move unit');
         }
         break;
       }

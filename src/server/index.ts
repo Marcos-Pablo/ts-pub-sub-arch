@@ -43,7 +43,7 @@ async function main() {
         try {
           await publishJSON(directChannel, ExchangePerilDirect, PauseKey, { isPaused: true } satisfies PlayingState);
         } catch (error) {
-          console.log('Error publishing message:', error);
+          console.log(error instanceof Error ? error.message : 'Error while publishing pause message');
         }
         break;
       }
@@ -52,7 +52,7 @@ async function main() {
         try {
           await publishJSON(directChannel, ExchangePerilDirect, PauseKey, { isPaused: false } satisfies PlayingState);
         } catch (error) {
-          console.log('Error publishing message:', error);
+          console.log(error instanceof Error ? error.message : 'Error while publishing resume message');
         }
         break;
       }
