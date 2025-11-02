@@ -1,11 +1,12 @@
 import amqp from 'amqplib';
 import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } from '../internal/gamelogic/gamelogic.js';
-import { declareAndBind, subscribeJSON } from '../internal/pubsub/consume.js';
-import { ExchangePerilDirect, PauseKey } from '../internal/routing/routing.js';
-import { GameState, type PlayingState } from '../internal/gamelogic/gamestate.js';
+import { subscribeJSON } from '../internal/pubsub/consume.js';
+import { ArmyMovesPrefix, ExchangePerilDirect, ExchangePerilTopic, PauseKey } from '../internal/routing/routing.js';
+import { GameState } from '../internal/gamelogic/gamestate.js';
 import { commandSpawn } from '../internal/gamelogic/spawn.js';
 import { commandMove } from '../internal/gamelogic/move.js';
-import { handlerPause } from './handlers.js';
+import { handlerMove, handlerPause } from './handlers.js';
+import { publishJSON } from '../internal/pubsub/publish.js';
 
 async function main() {
   console.log('Starting Peril client...');
@@ -29,24 +30,27 @@ async function main() {
   );
 
   const username = await clientWelcome();
-
-  const [channel, queue] = await declareAndBind(
-    connection,
-    ExchangePerilDirect,
-    `${PauseKey}.${username}`,
-    PauseKey,
-    'transient',
-  );
-
   const gameState = new GameState(username);
-  subscribeJSON(
-    connection,
-    ExchangePerilDirect,
-    `${PauseKey}.${username}`,
-    PauseKey,
-    'transient',
-    handlerPause(gameState),
-  );
+
+  const [channel] = await Promise.all([
+    connection.createConfirmChannel(),
+    subscribeJSON(
+      connection,
+      ExchangePerilDirect,
+      `${PauseKey}.${username}`,
+      PauseKey,
+      'transient',
+      handlerPause(gameState),
+    ),
+    subscribeJSON(
+      connection,
+      ExchangePerilTopic,
+      `${ArmyMovesPrefix}.${username}`,
+      `${ArmyMovesPrefix}.*`,
+      'transient',
+      handlerMove(gameState),
+    ),
+  ]);
 
   while (true) {
     const input = await getInput();
@@ -65,7 +69,8 @@ async function main() {
       }
       case 'move': {
         try {
-          commandMove(gameState, input);
+          const move = commandMove(gameState, input);
+          await publishJSON(channel, ExchangePerilTopic, `${ArmyMovesPrefix}.${username}`, move);
         } catch (error) {
           console.log(error instanceof Error ? error.message : 'Error while trying to move unit');
         }
