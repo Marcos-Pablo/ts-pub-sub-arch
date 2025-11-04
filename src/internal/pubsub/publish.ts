@@ -20,7 +20,15 @@ export async function publishJSON<T>(
         reject(new Error('Message was NACKed by the broker'));
       }
       resolve();
-      console.log('Message published');
     });
   });
+}
+
+export function makePublishJSON<T>(
+  ch: ConfirmChannel,
+  exchange: string,
+): (routingKey: string, value: T) => Promise<void> {
+  return async (routingKey: string, value: T) => {
+    await publishJSON<T>(ch, exchange, routingKey, value);
+  };
 }
