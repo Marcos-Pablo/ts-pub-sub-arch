@@ -3,7 +3,8 @@ import { publishJSON } from '../internal/pubsub/publish.js';
 import { ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, PauseKey } from '../internal/routing/routing.js';
 import type { PlayingState } from '../internal/gamelogic/gamestate.js';
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js';
-import { declareAndBind } from '../internal/pubsub/consume.js';
+import { subscribeMsgPack } from '../internal/pubsub/consume.js';
+import { handlerLog } from './handlers.js';
 
 async function main() {
   console.log('Starting Peril server...');
@@ -24,9 +25,9 @@ async function main() {
     }),
   );
 
-  const [directChannel, [topicChannel, queue]] = await Promise.all([
+  const [directChannel] = await Promise.all([
     connection.createConfirmChannel(),
-    declareAndBind(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, 'durable'),
+    subscribeMsgPack(connection, ExchangePerilTopic, GameLogSlug, `${GameLogSlug}.*`, 'durable', handlerLog()),
   ]);
 
   printServerHelp();
