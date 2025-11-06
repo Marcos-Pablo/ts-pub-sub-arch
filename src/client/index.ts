@@ -1,5 +1,12 @@
 import amqp, { type ConfirmChannel } from 'amqplib';
-import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } from '../internal/gamelogic/gamelogic.js';
+import {
+  clientWelcome,
+  commandStatus,
+  getInput,
+  getMaliciousLog,
+  printClientHelp,
+  printQuit,
+} from '../internal/gamelogic/gamelogic.js';
 import { subscribeJSON } from '../internal/pubsub/consume.js';
 import {
   ArmyMovesPrefix,
@@ -30,7 +37,7 @@ async function main() {
         await connection.close();
         console.log('RabbitMQ connection closed.');
       } catch (err) {
-        console.log('Error closing RabbitMQ connection:', err);
+        console.error('Error closing RabbitMQ connection:', err);
       } finally {
         process.exit(0);
       }
@@ -79,7 +86,7 @@ async function main() {
         try {
           commandSpawn(gameState, input);
         } catch (error) {
-          console.log(error instanceof Error ? error.message : 'Error while trying to spawn unit');
+          console.error(error instanceof Error ? error.message : 'Error while trying to spawn unit');
         }
         break;
       }
@@ -88,7 +95,7 @@ async function main() {
           const move = commandMove(gameState, input);
           await publishJSON(channel, ExchangePerilTopic, `${ArmyMovesPrefix}.${username}`, move);
         } catch (error) {
-          console.log(error instanceof Error ? error.message : 'Error while trying to move unit');
+          console.error(error instanceof Error ? error.message : 'Error while trying to move unit');
         }
         break;
       }
@@ -101,7 +108,21 @@ async function main() {
         break;
       }
       case 'spam': {
-        console.log('Spamming lot allowed yet!');
+        if (!input[1] || Number.isNaN(input[1])) {
+          console.log('usage: spam <number>');
+          continue;
+        }
+
+        const spamNumber = parseInt(input[1]);
+        for (let i = 0; i < spamNumber; i++) {
+          try {
+            const log = getMaliciousLog();
+            publishGameLog(channel, gameState.getUsername(), log);
+          } catch (error) {
+            console.error('Error publishing spam message:', error);
+          }
+        }
+        console.log(`Published ${spamNumber} malicious logs`);
         break;
       }
       case 'quit': {
