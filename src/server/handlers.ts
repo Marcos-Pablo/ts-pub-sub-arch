@@ -7,7 +7,7 @@ export function handlerLog(): (gl: GameLog) => Acktype {
       writeLog(gl);
       return 'Ack';
     } catch (err) {
-      console.log('Error writing log:', err);
+      console.error('Error writing log:', err);
       return 'NackDiscard';
     } finally {
       process.stdout.write('> ');

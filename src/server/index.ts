@@ -18,7 +18,7 @@ async function main() {
         await connection.close();
         console.log('RabbitMQ connection closed.');
       } catch (err) {
-        console.log('Error closing RabbitMQ connection:', err);
+        console.error('Error closing RabbitMQ connection:', err);
       } finally {
         process.exit(0);
       }
@@ -44,7 +44,7 @@ async function main() {
         try {
           await publishJSON(directChannel, ExchangePerilDirect, PauseKey, { isPaused: true } satisfies PlayingState);
         } catch (error) {
-          console.log(error instanceof Error ? error.message : 'Error while publishing pause message');
+          console.error(error instanceof Error ? error.message : 'Error while publishing pause message');
         }
         break;
       }
@@ -53,7 +53,7 @@ async function main() {
         try {
           await publishJSON(directChannel, ExchangePerilDirect, PauseKey, { isPaused: false } satisfies PlayingState);
         } catch (error) {
-          console.log(error instanceof Error ? error.message : 'Error while publishing resume message');
+          console.error(error instanceof Error ? error.message : 'Error while publishing resume message');
         }
         break;
       }

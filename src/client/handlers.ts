@@ -35,7 +35,7 @@ export function handlerMove(gs: GameState, ch: ConfirmChannel): (move: ArmyMove)
             await publishJSON(ch, ExchangePerilTopic, `${WarRecognitionsPrefix}.${gs.getUsername()}`, recognition);
             return 'Ack';
           } catch (error) {
-            console.log('Error publishing war recognition:', error);
+            console.error('Error publishing war recognition:', error);
             return 'NackRequeue';
           }
         }
@@ -68,7 +68,7 @@ export function handlerWar(gs: GameState, ch: ConfirmChannel): (rw: RecognitionO
             );
             return 'Ack';
           } catch (error) {
-            console.log('Error publishing game log: ', error);
+            console.error('Error publishing game log: ', error);
             return 'NackRequeue';
           }
         }
